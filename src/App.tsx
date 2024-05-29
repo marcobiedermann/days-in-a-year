@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   eachWeekendOfYear,
@@ -7,6 +8,7 @@ import {
   isWeekend,
   startOfYear,
 } from "date-fns";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ZodObject, ZodRawShape, z } from "zod";
@@ -17,8 +19,10 @@ const paramsSchema = z.object({
 });
 
 const searchParamsSchema = z.object({
-  vacationDays: z.coerce.number().min(0).max(365).default(20),
-  sickDays: z.coerce.number().min(0).max(365).default(0),
+  vacationDays: z.coerce.number().default(20),
+  sickDays: z.coerce.number().default(0),
+  subdivisionCode: z.string().optional(),
+  countryIsoCode: z.string().optional().default("DE"),
 });
 
 function parseSearchParams<T extends ZodRawShape>(
@@ -31,25 +35,20 @@ function parseSearchParams<T extends ZodRawShape>(
 const formDataSchema = z.object({
   countryIsoCode: z.string(),
   subdivisionCode: z.string(),
-  sickDays: z.number().int().positive(),
-  vacationDays: z.number().int().positive(),
+  sickDays: z.number().int(),
+  vacationDays: z.number().int(),
 });
 
 type FormData = z.infer<typeof formDataSchema>;
 
 function App() {
   const params = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { year } = paramsSchema.parse(params);
-  const { sickDays: defaultSickDays, vacationDays: defaultVacationDays } =
-    parseSearchParams(searchParams, searchParamsSchema);
-  const { register, watch } = useForm<FormData>({
+  const defaultValues = parseSearchParams(searchParams, searchParamsSchema);
+  const { register, watch, handleSubmit } = useForm<FormData>({
     resolver: zodResolver(formDataSchema),
-    defaultValues: {
-      countryIsoCode: "DE",
-      sickDays: defaultSickDays,
-      vacationDays: defaultVacationDays,
-    },
+    defaultValues,
   });
 
   const now = new Date(year);
@@ -86,6 +85,19 @@ function App() {
     numberOfPublicHolidays - publicHolidaysOnWeekends;
   const workingDays =
     weekdays - publicHolidaysOnWeekdays - vacationDays - sickDays;
+
+  function onSubmit(data: FormData) {
+    // @ts-ignore
+    setSearchParams(data);
+  }
+
+  useEffect(() => {
+    // @ts-ignore
+    const subscription = watch(handleSubmit(onSubmit));
+
+    // @ts-ignore
+    return () => subscription.unsubscribe();
+  }, [handleSubmit, watch]);
 
   if (isPending) {
     return <div>Loading …</div>;
@@ -127,8 +139,6 @@ function App() {
             type="number"
             {...register("vacationDays", {
               valueAsNumber: true,
-              min: 0,
-              max: 365,
             })}
           />
         </div>
@@ -139,8 +149,6 @@ function App() {
             type="number"
             {...register("sickDays", {
               valueAsNumber: true,
-              min: 0,
-              max: 365,
             })}
           />
         </div>
