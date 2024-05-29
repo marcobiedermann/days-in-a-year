@@ -73,7 +73,13 @@ function usePublicHolidays(params: PublicHolidaysOptions, options: Options) {
   const { countryIsoCode, validFrom, validTo, subdivisionCode } = params;
 
   return useQuery({
-    queryKey: ["publicHolidays", countryIsoCode, validFrom, validTo],
+    queryKey: [
+      "publicHolidays",
+      countryIsoCode,
+      subdivisionCode,
+      validFrom,
+      validTo,
+    ],
     queryFn: () =>
       getPublicHolidays({
         countryIsoCode,
